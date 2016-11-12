@@ -10,9 +10,11 @@ from datetime import datetime
 
 from sqlalchemy import create_engine
 
+from sqlalchemy import exc
 from sqlalchemy import event
 from sqlalchemy import Table
 from sqlalchemy import Column
+from sqlalchemy import select
 from sqlalchemy import ForeignKey
 from sqlalchemy import VARCHAR
 from sqlalchemy.orm import relationship
@@ -254,6 +256,19 @@ class HomestackDatabase(object):
 
         # No args, so assume we're running a generic query() against `this` class
         return cls._session.query(cls)
+
+    @classmethod
+    def insert(cls, **kwargs):
+        """
+        Helper method to simplify inserts. Create an instance, insert it, commit it, and return it
+        """
+
+        instance = cls(**kwargs)
+
+        cls._session.add(instance)
+        cls._session.commit()
+
+        return instance
 
 """
 The following two tables are essentially pivot tables. They're what allows us
