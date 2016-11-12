@@ -2,9 +2,12 @@
 # -*- coding: latin-1 -*-
 
 from hsdb import User
-from hsdb import APIKey
+from hsdb import ApiKey
+
+from hsdb import HomestackDatabase
 
 __ALL__ = [
     "User",
-    "APIKey"
+    "ApiKey",
+    "HomestackDatabase"
 ]

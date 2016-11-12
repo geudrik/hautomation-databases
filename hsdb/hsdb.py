@@ -10,6 +10,7 @@ from datetime import datetime
 
 from sqlalchemy import create_engine
 
+from sqlalchemy import event
 from sqlalchemy import Column
 from sqlalchemy import ForeignKey
 from sqlalchemy import VARCHAR
@@ -177,6 +178,11 @@ class HomestackDatabase(object):
     The purpose here is to provide additional functionality and provode some ease
     of use helpers in all of our other classes
     """
+
+    _base           = hs_base
+    _engine         = hs_engine
+    _session_maker  = hs_session_maker
+    _session        = hs_session_maker()
 
     @classmethod
     def get_session(cls):
