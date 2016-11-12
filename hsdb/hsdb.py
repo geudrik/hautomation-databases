@@ -11,6 +11,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 
 from sqlalchemy import event
+from sqlalchemy import Table
 from sqlalchemy import Column
 from sqlalchemy import ForeignKey
 from sqlalchemy import VARCHAR
@@ -254,6 +255,24 @@ class HomestackDatabase(object):
         # No args, so assume we're running a generic query() against `this` class
         return cls._session.query(cls)
 
+"""
+The following two tables are essentially pivot tables. They're what allows us
+to easily map roles to gruops, and visa-versa
+"""
+UserGroupToRole     = Table(
+                        "UserGroupsToRoles", 
+                        hs_base.metadata,
+                        Column("user_group_id", INTEGER(unsigned=True), ForeignKey("UserGroups.group_id")),
+                        Column("role_id", INTEGER(unsigned=True), ForeignKey("Roles.role_id"))
+                    )
+
+UserToUserGroup     = Table(
+                        "UsersToUserGroups",
+                        hs_base.metadata,
+                        Column("user_id", INTEGER(unsigned=True), ForeignKey("Users.user_id")),
+                        Column("user_group_id", INTEGER(unsigned=True), ForeignKey("UserGroups.group_id"))
+                    )
+
 class User(hs_base, HomestackDatabase):
     """
     Class that represents our User table
@@ -274,6 +293,48 @@ class User(hs_base, HomestackDatabase):
 
     # str: The username for this user
     username        = Column(VARCHAR(128), unique=True, nullable=False)
+
+class UserGroup(hs_base, HomestackDatabase):
+    """
+    Class that holds groups. This is only lightly used currently. The alembic
+    transform contains an insert creating our 'administrators' group
+
+    We leverage this predominantly for API key usage
+    """
+
+    __tablename__   = 'UserGroups'
+    __bind_key__    = 'homestack'
+    __serializeable_relations__ = ['roles']
+
+    # int: the ID of this group
+    group_id        = Column(INTEGER(unsigned=True), primary_key=True)
+    id              = synonym("group_id")
+
+    # str: the name of this group
+    name            = Column(VARCHAR(30), unique=True, nullable=False)
+
+    # Helper relationships
+    users           = relationship("User", secondary=UserToUserGroup)
+    roles           = relationship("Role", secondary=UserGroupToRole)
+
+class Role(hs_base, HomestackDatabase):
+    """
+    This class contains specific priviledges required to access certain 
+    routes/endpoints. The 'admin' role is created in the alembic migration
+    """
+
+    __tablename__   = 'Roles'
+    __bind_key__    = 'homestack'
+
+    # int: the ID of this role
+    role_id         = Column(INTEGER(unsigned=True), primary_key=True)
+    id              = synonym("role_id")
+    
+    # str: the name of this role
+    name            = Column(VARCHAR(30), unique=True, nullable=False)
+
+    # Helper relationship
+    user_groups     = relationship("UserGroup", secondary=UserGroupToRole)
 
 class ApiKey(hs_base, HomestackDatabase):
     """
