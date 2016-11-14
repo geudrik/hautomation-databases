@@ -5,6 +5,7 @@ from hsdb import User
 from hsdb import UserGroup
 from hsdb import Role
 from hsdb import ApiKey
+from bsdb import Password
 
 from hsdb import HomestackDatabase
 
@@ -13,5 +14,6 @@ __ALL__ = [
     "UserGroup",
     "Role",
     "ApiKey",
+    "Password",
     "HomestackDatabase"
 ]
