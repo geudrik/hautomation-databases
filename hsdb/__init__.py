@@ -5,7 +5,7 @@ from hsdb import User
 from hsdb import UserGroup
 from hsdb import Role
 from hsdb import ApiKey
-from bsdb import Password
+from hsdb import Password
 
 from hsdb import HomestackDatabase
 
