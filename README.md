@@ -5,7 +5,7 @@ This is the repository for the database library. I opted to divorce the models f
 ### Dependencies
 ```
 sudo apt-get install git python-pip -y
-pip install alembic sqlalchemy
+pip install alembic sqlalchemy argon2
 ```
 
 ### Config File
