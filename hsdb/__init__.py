@@ -2,18 +2,19 @@
 # -*- coding: latin-1 -*-
 
 from hsdb import User
+from hsdb import Password
 from hsdb import UserGroup
 from hsdb import Role
 from hsdb import ApiKey
-from hsdb import Password
 
 from hsdb import HomestackDatabase
 
 __ALL__ = [
     "User",
+    "Password",
     "UserGroup",
     "Role",
     "ApiKey",
-    "Password",
+    
     "HomestackDatabase"
 ]

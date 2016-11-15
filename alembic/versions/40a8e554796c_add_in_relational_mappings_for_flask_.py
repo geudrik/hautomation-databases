@@ -1,4 +1,4 @@
-"""Add in relational mappings for flask-principal easy of use
+"""Add in relational mappings for flask-principal ease of use
 
 Revision ID: 40a8e554796c
 Revises: e1e967f56f02

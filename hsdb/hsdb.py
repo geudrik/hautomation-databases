@@ -271,6 +271,13 @@ class HomestackDatabase(object):
 
         return instance
 
+    def delete(self):
+        """
+        Helper function that allows us to tack on .delete() on a select if we want
+        """
+        self.__class__._session.delete(self)
+        self.__class__._session.commit()
+
 """
 The following two tables are essentially pivot tables. They're what allows us
 to easily map roles to gruops, and visa-versa
@@ -326,7 +333,7 @@ class Password(hs_base, HomestackDatabase):
     id              = synonym('password_id')
 
     # bin: the binary representation of a sha256 encrypted password
-    hashed_password = Column(BINARY(32), nullable=False, index=True)
+    hashed_password = Column(BINARY(128), nullable=False, index=True)
 
 class UserGroup(hs_base, HomestackDatabase):
     """
@@ -375,7 +382,7 @@ class ApiKey(hs_base, HomestackDatabase):
     Class that represents our API Keys table
     """
 
-    __tablename__   = 'APIKeys'
+    __tablename__   = 'ApiKeys'
     __bind_key__    = 'homestack'
 
     # int: API key id
