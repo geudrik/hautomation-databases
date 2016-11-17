@@ -361,7 +361,7 @@ class Password(hs_base, HomestackDatabase):
     id              = synonym('password_id')
 
     # bin: the binary representation of a sha256 encrypted password
-    password_hash   = Column(BINARY(128), nullable=False, index=True)
+    hashed_password = Column(BINARY(128), nullable=False, index=True)
 
 class UserGroup(hs_base, HomestackDatabase):
     """
