@@ -19,8 +19,8 @@ from sqlalchemy.dialects import mysql
 from hsdb import User
 from hsdb import Password
 from hsdb import HomestackDatabase as HSDB
-from hsdb import Role as HSRole
-from hsdb import UserGroup as HSUserGroup
+from hsdb import Role
+from hsdb import UserGroup
 
 from argon2 import argon2_hash
 
@@ -88,23 +88,29 @@ def upgrade():
     # Create a few base Roles
     roles = ["admin", "read_all", "hue_rw", "nest_rw"]
     for role in roles:
-        HSRole.insert(name=role)
+        Role.insert(name=role)
 
     # Create a few base groups
     groups = {
-        "adminstrator" : ['admin'],
+        "administrator" : ['admin'],
         "user" : ['read_all'],
         "google" : ['hue_rw', 'nest_rw']
     }
 
     # Create group/role mappings in the DB
     for group, roles in groups.iteritems():
-        g = HSUserGroup.insert(name=group)
+        g = UserGroup.insert(name=group)
 
         for role in roles:
-            r = HSRole.filter_by(name=role).first()
+            r = Role.filter_by(name=role).first()
             g.roles.append(r)
 
+    session.commit()
+
+    # Grant `administrator` group the `admin` role
+    admin_role = Role.filter_by(name='admin').first()
+    admin_group = UserGroup.filter_by(name="administrator").first()
+    admin_group.roles.append(admin_role)
     session.commit()
 
     # Create our admin/admin user
@@ -112,7 +118,14 @@ def upgrade():
     u = User.insert(username='admin', time=now, timestamp=now)
     session.commit()
     session.flush()
+
+    # This create a default password of `admin` for our admin user, with hard coded time complexity values
+    # These hard-coded values are used during login if the admin user appears to be initiating a first-login
     p = Password.insert(hashed_password=bytearray(argon2_hash("admin", u.password_salt, t=2000, m=1024)))
+    session.commit()
+
+    # Add admin user to `administrator` group
+    u.user_groups.append(admin_group)
     session.commit()
 
 
