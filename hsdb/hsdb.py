@@ -20,10 +20,13 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import synonym
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.inspection import inspect
 from sqlalchemy.dialects.mysql import BINARY
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.dialects.mysql import DATETIME
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm.relationships import RelationshipProperty
 
 """
 This whole section is a bit of a hack, but it works. Try to load DB connection vars
@@ -278,6 +281,114 @@ class HomestackDatabase(object):
         self.__class__._session.delete(self)
         self.__class__._session.commit()
 
+    def _get_hybrid_properties(self):
+        return dict( (key, prop) for key, prop in inspect(self).mapper.all_orm_descriptors.items() if isinstance(prop, hybrid_property) )
+
+    def serialize(self, depth=1, hybrid=True):
+        """
+        Aren't recursive functions super fun?
+
+        Iterate over our object, following relationships to a max `depth`
+        ultimately returning a json serializable format (see: a dict)
+
+        BEWARE THE BACKREF
+            User -> UserGroups -> User -> .....
+
+        The use of `__serializable_relations__` is the hack-n-slash method to indicate
+        which relationships for that class we should recurse through
+
+        See the UserGroup class for an example. The `roles` relationship will be serialized
+
+        Args:
+            depth (int) The max number of levels to recurse through
+            hybrid (bool) Whether or not to include the serialization of hybrid properties
+
+        """
+
+        # Bail if we've exhausted our recursion depth
+        if depth == 0:
+            return None
+
+        # Our return object
+        ret = {}
+
+        # Quick check to see if we're serializiable
+        def is_serializable():
+            if hasattr(self, '__serializable_relations__') and key in self.__serializable_relations__ and depth > 1:
+                return True
+            return False
+
+        # Ensure our session is more fresh than Stunna's coke
+        # This ensures we don't hit weird edge-case scenerios where attributes don't exist
+        attributes = self.__dict__.items()
+        if not [ attr for attr in attributes if attr[0] is str and not attr[0].startswith('_') ]:
+            self._session.refresh(self)
+
+        # For each relationship we've explicitely set as serialziable via __serializable_relations__
+        #   load them!
+        # getattr returns a value, thus implicitely loading our property into this instance
+        properties = self.__mapper__.iterate_properties
+        for prop in properties:
+            if isinstance(prop, RelationshipProperty):
+                key = getattr(prop, 'key')
+                if is_serializable():
+                    getattr(self, key)
+
+        # Begin to actually walk through our object and begin to serialize the data
+        for key, value in self.__dict__.items():
+
+            # If our key looks private, ignore it and continue
+            if key.startswith("_"):
+                continue
+
+            # If our value is an instance of HomestackDatabase
+            if isinstance(value, HomestackDatabase):
+                if is_serializable():
+                    ret[key] = value.serialize(depth=depth-1)
+
+            # If our value is a list of objects
+            elif isinstance(value, list):
+
+                _ret = []
+                for item in value:
+
+                    # Looping through all items, do the same work we do against a single
+                    if isinstance(item, HomestackDatabase):
+                        if is_serializable():
+                            _ret.append(item.serialize(depth=depth-1))
+
+                ret[key] = _ret
+
+            # Other weird edge cases for serialization
+            else:
+
+                # How to serialize datetime objects
+                if isinstance(value, datetime):
+                    ret[key] = value.isoformat()
+
+                # Blind fallback #yolo
+                else:
+                    ret[key] = value
+
+        # Attempt to serialize our hybrid properties
+        if hybrid:
+
+            hybrid_properties = self._get_hybrid_properties()
+
+            for key, value in hybrid_properties.items():
+                value = value.get(self)
+
+                # How to serialize datetime objects
+                if isinstance(value, datetime):
+                    ret[key] = value.isoformat()
+
+                # Blind fallback #yolo
+                else:
+                    ret[key] = value
+
+        # Finally, return our dict
+        return ret
+
 """
 The following two tables are essentially pivot tables. They're what allows us
 to easily map roles to gruops, and visa-versa
@@ -363,6 +474,7 @@ class Password(hs_base, HomestackDatabase):
     # bin: the binary representation of a sha256 encrypted password
     hashed_password = Column(BINARY(128), nullable=False, index=True)
 
+
 class UserGroup(hs_base, HomestackDatabase):
     """
     Class that holds groups. This is only lightly used currently. The alembic
@@ -373,7 +485,7 @@ class UserGroup(hs_base, HomestackDatabase):
 
     __tablename__   = 'UserGroups'
     __bind_key__    = 'homestack'
-    __serializeable_relations__ = ['roles']
+    __serializable_relations__ = ['roles']
 
     # int: the ID of this group
     group_id        = Column(INTEGER(unsigned=True), primary_key=True)
@@ -385,6 +497,7 @@ class UserGroup(hs_base, HomestackDatabase):
     # Helper relationships
     users           = relationship("User", secondary=UserToUserGroup)
     roles           = relationship("Role", secondary=UserGroupToRole)
+
 
 class Role(hs_base, HomestackDatabase):
     """
@@ -404,6 +517,7 @@ class Role(hs_base, HomestackDatabase):
 
     # Helper relationship
     user_groups     = relationship("UserGroup", secondary=UserGroupToRole)
+
 
 class ApiKey(hs_base, HomestackDatabase):
     """

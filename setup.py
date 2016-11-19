@@ -6,7 +6,7 @@ from distutils.core import setup
 setup(
     name             = "HomestackDatabases",
     packages         = ['hsdb'],
-    version          = '0.0.8',
+    version          = '0.0.9',
     description      = 'Homestack Database Library',
     author           = 'Pat Litke',
     author_email     = 'litke.p+gh@arcti.cc',
