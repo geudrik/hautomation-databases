@@ -5,6 +5,7 @@ import ConfigParser
 import os
 
 from uuid import uuid4
+from uuid import UUID
 
 from datetime import datetime
 
@@ -22,6 +23,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.inspection import inspect
 from sqlalchemy.dialects.mysql import BINARY
+from sqlalchemy.dialects.mysql import BOOLEAN
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -376,7 +378,7 @@ class HomestackDatabase(object):
             hybrid_properties = self._get_hybrid_properties()
 
             for key, value in hybrid_properties.items():
-                value = value.get(self)
+                value = value.fget(self)
 
                 # How to serialize datetime objects
                 if isinstance(value, datetime):
@@ -535,8 +537,8 @@ class ApiKey(hs_base, HomestackDatabase):
     # int: User id for this key
     user_id         = Column(INTEGER(unsigned=True), ForeignKey("Users.user_id"), nullable=False)
 
-    # str: The api key
-    api_key         = Column(VARCHAR(36), unique=True, nullable=False, default=uuid4)
+    # bin: A UUID in binary format
+    _api_key        = Column('api_key', BINARY(16), unique=True, nullable=False, default=lambda: str(uuid4()).replace('-', '').decode('hex'))
 
     # str: brief description for usage of this key
     description     = Column(VARCHAR(255))
@@ -546,6 +548,19 @@ class ApiKey(hs_base, HomestackDatabase):
 
     # object: Convienience relationship to our User class
     user            = relationship("User")
+
+    @hybrid_property
+    def api_key(self):
+        return str(UUID(self._api_key.encode("hex")))
+
+    # @api_key.setter
+    # def api_key(self, key):
+    #     self._api_key = key.replace('-', '').decode('hex')
+
+    # @api_key.expression
+    # def api_key(self):
+    #     return self._api_key
+
 
 # Explicitely do nothing on direct run
 if __name__ == "__main__":
