@@ -26,6 +26,7 @@ from sqlalchemy.dialects.mysql import BINARY
 from sqlalchemy.dialects.mysql import BOOLEAN
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.dialects.mysql import DATETIME
+from sqlalchemy.ext.hybrid import Comparator
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.relationships import RelationshipProperty
@@ -549,18 +550,60 @@ class ApiKey(hs_base, HomestackDatabase):
     # object: Convienience relationship to our User class
     user            = relationship("User")
 
+
+    class ApiKeyComparator(Comparator):
+        """
+        provides an __eq__() method that will run against both sides of the expression
+        when we're trying to filter_by(api_key=something)
+        http://docs.sqlalchemy.org/en/latest/orm/extensions/hybrid.html#building-custom-comparators
+        """
+        def __eq__(self, other):
+            return self.__clause_element__() == other.replace('-', '').decode('hex')
+
     @hybrid_property
     def api_key(self):
         return str(UUID(self._api_key.encode("hex")))
 
-    # @api_key.setter
-    # def api_key(self, key):
-    #     self._api_key = key.replace('-', '').decode('hex')
+    @api_key.comparator
+    def api_key(cls):
+        return ApiKey.ApiKeyComparator(cls._api_key)
 
-    # @api_key.expression
-    # def api_key(self):
-    #     return self._api_key
 
+class HueBridge(hs_base, HomestackDatabase):
+    """
+    Class that represents our Hue bridges
+    """
+
+    __tablename__   = "HueBridges"
+    __bind_key__    = "homestack"
+
+    # int: the ID of this bridge
+    bridge_id       = Column(INTEGER(unsigned=True), primary_key=True)
+    id              = synonym("bridge_id")
+
+    # str: Description and short name for this bridge so we know which one it is
+    name            = Column(VARCHAR(255), nullable=False)
+
+    # str: For shits and giggles, store the address as a string (ipv6 and ipv4 don't store well together otherwise)
+    address         = Column(VARCHAR(45), nullable=False)
+
+class HueBridgeUser(hs_base, HomestackDatabase):
+
+    __tablename__   = "HueBridgeUsers"
+    __bind_key__    = "homestack"
+
+    # int: The id of this bridge user row
+    bridge_user_id  = Column(INTEGER(unsigned=True), primary_key=True)
+    id              = synonym("bridge_user_id")
+
+    # int: The ID this bridge user belongs to
+    bridge_id       = Column(INTEGER(unsigned=True), ForeignKey("HueBridges.bridge_id"), nullable=False)
+
+    # int: The ID of the user this bridge user belongs to
+    user_id         = Column(INTEGER(unsigned=True), ForeignKey("Users.user_id"), nullable=False)
+
+    # str: Bridge "API Key" that we use for accessing this bridge
+    bridge_user     = Column(VARCHAR(40), unique=True, index=True, nullable=False)
 
 # Explicitely do nothing on direct run
 if __name__ == "__main__":
