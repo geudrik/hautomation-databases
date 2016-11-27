@@ -6,6 +6,8 @@ from hsdb import Password
 from hsdb import UserGroup
 from hsdb import Role
 from hsdb import ApiKey
+from hsdb import HueBridge
+from hsdb import HueBridgeUser
 
 from hsdb import UserGroupToRole
 from hsdb import UserToUserGroup
@@ -18,6 +20,8 @@ __ALL__ = [
     "UserGroup",
     "Role",
     "ApiKey",
+    "HueBridge",
+    "HueBridgeUser",
 
     "UserGroupToRole",
     "UserToUserGroup",
