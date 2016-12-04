@@ -28,6 +28,7 @@ target_metadata = HomestackDatabase._base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+compare_type=True
 
 
 def run_migrations_offline():
@@ -65,7 +66,8 @@ def run_migrations_online():
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            compare_type=True
         )
 
         with context.begin_transaction():

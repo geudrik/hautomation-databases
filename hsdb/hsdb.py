@@ -576,41 +576,24 @@ class HueBridge(hs_base, HomestackDatabase):
 
     __tablename__   = "HueBridges"
     __bind_key__    = "homestack"
-    __serializable_relations__ = ['bridge_user']
 
     # int: the ID of this bridge
     bridge_id       = Column(INTEGER(unsigned=True), primary_key=True)
     id              = synonym("bridge_id")
 
+    user_id         = Column(INTEGER(unsigned=True), ForeignKey("Users.user_id"), nullable=False)
+
     # str: Description and short name for this bridge so we know which one it is
-    name            = Column(VARCHAR(255), nullable=False, unique=True)
+    name            = Column(VARCHAR(150), nullable=False)
 
     # str: For shits and giggles, store the address as a string (ipv6 and ipv4 don't store well together otherwise)
     #   45 chars is the max length of a 6:4 address
-    address         = Column(VARCHAR(45), nullable=False, unique=True)
+    address         = Column(VARCHAR(45), nullable=False)
 
-    # For convienience
-    bridge_user     = relationship("HueBridgeUser")
+    # The "api key" that Hue uses
+    user            = Column(VARCHAR(40), nullable=False, unique=True)
 
-class HueBridgeUser(hs_base, HomestackDatabase):
 
-    __tablename__   = "HueBridgeUsers"
-    __bind_key__    = "homestack"
-
-    # int: The id of this bridge user row
-    bridge_user_id  = Column(INTEGER(unsigned=True), primary_key=True)
-    id              = synonym("bridge_user_id")
-
-    # int: The ID this bridge user belongs to
-    bridge_id       = Column(INTEGER(unsigned=True), ForeignKey("HueBridges.bridge_id"), nullable=False)
-
-    # int: The ID of the user this bridge user belongs to
-    user_id         = Column(INTEGER(unsigned=True), ForeignKey("Users.user_id"), nullable=False)
-
-    # str: Bridge "API Key" that we use for accessing this bridge
-    bridge_user     = Column(VARCHAR(40), unique=True, index=True, nullable=False)
-
-    bridge          = relationship("HueBridge")
 
 # Explicitely do nothing on direct run
 if __name__ == "__main__":
