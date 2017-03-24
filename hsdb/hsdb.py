@@ -551,6 +551,19 @@ class ApiKey(hs_base, HomestackDatabase):
     user            = relationship("User")
 
 
+    """
+    The below can safely be ignored
+
+    This is all neato IMO. Our `.api_key` attribute is transparently handled for us using this
+    method. So we can work with strings, but leave it stored on the backend as binary. This
+    same method would work well for things like hashes
+
+    ApiKey.filter_by(api_key='some api key').first()
+    ApiKey.insert(api_key='the generated api key', description='some desc')
+
+    The liklihood that we're ever going to use the setter on this class is pretty slim, but
+    at least this way I know where I can go to reference this concept later :P
+    """
     class ApiKeyComparator(Comparator):
         """
         provides an __eq__() method that will run against both sides of the expression
@@ -567,6 +580,10 @@ class ApiKey(hs_base, HomestackDatabase):
     @api_key.comparator
     def api_key(cls):
         return ApiKey.ApiKeyComparator(cls._api_key)
+
+    @api_key.setter
+    def api_key(self, key_string):
+        self._api_key = key_string.replace('-', '').decode('hex')
 
 
 class HueBridge(hs_base, HomestackDatabase):
